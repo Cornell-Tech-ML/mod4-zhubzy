@@ -15,6 +15,9 @@ class SGD(Optimizer):
         self.lr = lr
 
     def zero_grad(self) -> None:
+        """Zeros the derivative values of the parameters. This is called before every call to step.
+        This is a no-op for parameters that don't have derivatives (e.g. non-leaf tensors).
+        """
         for p in self.parameters:
             if p.value is None:
                 continue
@@ -26,6 +29,7 @@ class SGD(Optimizer):
                     p.value.grad = None
 
     def step(self) -> None:
+        """Updates the parameters based on the gradients stored in the parameters. Should only be called after `zero_grad` and after a call to backward."""
         for p in self.parameters:
             if p.value is None:
                 continue
