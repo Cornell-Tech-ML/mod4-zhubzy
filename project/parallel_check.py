@@ -3,6 +3,7 @@ from numba import njit
 import minitorch
 import minitorch.fast_ops
 
+import numpy as np
 # MAP
 print("MAP")
 tmap = minitorch.fast_ops.tensor_map(njit()(minitorch.operators.id))
@@ -30,11 +31,15 @@ print(treduce.parallel_diagnostics(level=3))
 # MM
 print("MATRIX MULTIPLY")
 out, a, b = (
-    minitorch.zeros((1, 10, 10)),
-    minitorch.zeros((1, 10, 20)),
-    minitorch.zeros((1, 20, 10)),
+    minitorch.zeros((3,1, 10, 10)),
+    minitorch.zeros((3,1, 10, 20)),
+    minitorch.zeros((3, 1, 20, 10)),
 )
 tmm = minitorch.fast_ops.tensor_matrix_multiply
 
 tmm(*out.tuple(), *a.tuple(), *b.tuple())
 print(tmm.parallel_diagnostics(level=3))
+
+
+
+
