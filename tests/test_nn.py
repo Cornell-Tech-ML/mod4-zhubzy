@@ -31,8 +31,22 @@ def test_avg(t: Tensor) -> None:
 @pytest.mark.task4_4
 @given(tensors(shape=(2, 3, 4)))
 def test_max(t: Tensor) -> None:
-    # TODO: Implement for Task 4.4.
-    raise NotImplementedError("Need to implement for Task 4.4")
+    out = minitorch.max(t, 0)
+    print("t is ", t)
+    print("out is ", out)
+    assert_close(out.view(3, 4)[0, 0], max([t[i, 0, 0] for i in range(2)]))
+
+    # Test max along dim 1 (channel dimension)
+    out = minitorch.max(t, 1)
+    assert_close(out.view(2, 4)[0, 0], max([t[0, i, 0] for i in range(3)]))
+
+    # Test max along dim 2 (last dimension)
+    out = minitorch.max(t, 2)
+    assert_close(out.view(2, 3)[0, 0], max([t[0, 0, i] for i in range(4)]))
+
+    minitorch.grad_check(
+        lambda a: minitorch.nn.max(a, dim=2), t + minitorch.rand(t.shape)
+    )
 
 
 @pytest.mark.task4_4
