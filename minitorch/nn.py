@@ -4,7 +4,7 @@ from . import operators
 from .autodiff import Context
 from .fast_ops import FastOps
 from .tensor import Tensor
-from .tensor_functions import Function, rand, tensor
+from .tensor_functions import Function, rand
 
 
 # List of functions in this file:
@@ -81,7 +81,6 @@ class Max(Function):
 
 def max(input: Tensor, dim: int) -> Tensor:
     """Apply max reduction on tensor."""
-
     return Max.apply(input, input._ensure_tensor(dim))
 
 
@@ -112,15 +111,17 @@ def logsoftmax(input: Tensor, dim: int) -> Tensor:
 
 
 def maxpool2d(input: Tensor, kernel: Tuple[int, int]) -> Tensor:
-    """
-    Tiled max pooling 2D.
+    """Tiled max pooling 2D.
 
     Args:
+    ----
         input: input tensor of shape (batch, channel, height, width)
         kernel: tuple of (kernel_height, kernel_width)
 
     Returns:
+    -------
         Max pooled tensor
+
     """
     batch, channel, _, _ = input.shape
     tiled, new_height, new_width = tile(input, kernel)
