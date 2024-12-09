@@ -21,7 +21,12 @@ class Linear(minitorch.Module):
         self.out_size = out_size
 
     def forward(self, x):
+        # print(x.shape)
         batch, in_size = x.shape
+        # print("weights", self.weights.value.shape)
+        # print("in", in_size)
+        # print("out", self.out_size)
+
         return (
             x.view(batch, in_size) @ self.weights.value.view(in_size, self.out_size)
         ).view(batch, self.out_size) + self.bias.value
@@ -30,12 +35,16 @@ class Linear(minitorch.Module):
 class Conv1d(minitorch.Module):
     def __init__(self, in_channels, out_channels, kernel_width):
         super().__init__()
+        # Initialize weights and bias parameters
         self.weights = RParam(out_channels, in_channels, kernel_width)
         self.bias = RParam(1, out_channels, 1)
 
     def forward(self, input):
-        # TODO: Implement for Task 4.5.
-        raise NotImplementedError("Need to implement for Task 4.5")
+        # Shape: [batch, out_channels, width]
+        conv_out = minitorch.conv1d(input, self.weights.value)
+
+        # Add bias - broadcasting will handle the dimension matching
+        return conv_out + self.bias.value
 
 
 class CNNSentimentKim(minitorch.Module):
@@ -61,16 +70,54 @@ class CNNSentimentKim(minitorch.Module):
     ):
         super().__init__()
         self.feature_map_size = feature_map_size
-        # TODO: Implement for Task 4.5.
-        raise NotImplementedError("Need to implement for Task 4.5")
+        self.dropout = dropout
+
+        # Create parallel convolution layers for each filter size
+        self.convolutions = []
+        for filter_size in filter_sizes:
+            conv = Conv1d(
+                in_channels=embedding_size,
+                out_channels=feature_map_size,
+                kernel_width=filter_size
+            )
+            self.convolutions.append(conv)
+
+        self.linear = Linear(feature_map_size, 1)
 
     def forward(self, embeddings):
         """
-        embeddings tensor: [batch x sentence length x embedding dim]
-        """
-        # TODO: Implement for Task 4.5.
-        raise NotImplementedError("Need to implement for Task 4.5")
+        Process input embeddings through the CNN architecture.
 
+        Args:
+            embeddings: Tensor of shape [batch x sentence length x embedding dim]
+
+        Returns:
+            Tensor of shape batch with sentiment predictions
+        """
+        # Transpose embeddings to match conv1d input format [batch x embedding dim x sentence length]
+        x = embeddings.permute(0, 2, 1)
+
+        # print("embedding shape ", embeddings.shape)
+        # Initialize accumulated features with the first convolution's output
+        conv_out = self.convolutions[0].forward(x)
+        features = minitorch.max(conv_out.relu(), dim=2)
+
+        # print("features ", features.shape)
+
+        # Add results from remaining convolutions
+        for conv in self.convolutions[1:]:
+            conv_out = conv.forward(x)
+            pooled = minitorch.max(conv_out.relu(), dim=2)
+            features = features + pooled
+
+        # Apply dropout before linear layer
+        dropped = minitorch.dropout(features, self.dropout, not self.training)
+
+        # Apply linear layer and sigmoid activation
+        logits = self.linear.forward(dropped.view(x.shape[0], self.feature_map_size))
+        out = logits.sigmoid().view(x.shape[0])
+
+        return out
 
 # Evaluation helper methods
 def get_predictions_array(y_true, model_output):
@@ -178,6 +225,7 @@ class SentenceSentimentTrain:
                     X_val,
                     backend=BACKEND,
                 )
+
                 out = model.forward(x)
                 validation_predictions += get_predictions_array(y, out)
                 validation_accuracy.append(get_accuracy(validation_predictions))
@@ -255,7 +303,7 @@ def encode_sentiment_data(dataset, pretrained_embeddings, N_train, N_val=0):
 if __name__ == "__main__":
     train_size = 450
     validation_size = 100
-    learning_rate = 0.01
+    learning_rate = 0.1
     max_epochs = 250
 
     (X_train, y_train), (X_val, y_val) = encode_sentiment_data(

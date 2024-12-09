@@ -41,8 +41,7 @@ class Conv2d(minitorch.Module):
         self.bias = RParam(out_channels, 1, 1)
 
     def forward(self, input):
-        # TODO: Implement for Task 4.5.
-        raise NotImplementedError("Need to implement for Task 4.5")
+        return minitorch.conv2d(input, self.weights.value) + self.bias.value
 
 
 class Network(minitorch.Module):
@@ -67,13 +66,42 @@ class Network(minitorch.Module):
         self.mid = None
         self.out = None
 
-        # TODO: Implement for Task 4.5.
-        raise NotImplementedError("Need to implement for Task 4.5")
+        # First convolution layer: 1 input channel → 4 output channels
+        self.conv1 = Conv2d(1, 4, 3, 3)
+        # Second convolution layer: 4 input channels → 8 output channels
+        self.conv2 = Conv2d(4, 8, 3, 3)
+        # Fully connected layers
+        self.fc1 = Linear(392,64)
+        self.fc2 = Linear(64, C)
+        self.dropout_rate = 0.25
 
     def forward(self, x):
-        # TODO: Implement for Task 4.5.
-        raise NotImplementedError("Need to implement for Task 4.5")
 
+        x = self.conv1.forward(x)
+        x = x.relu()
+
+        # Second convolution + ReLU
+        x = self.conv2.forward(x)
+        x = x.relu()
+
+        # Pooling layer (4x4)
+        x = minitorch.maxpool2d(x, (4, 4))
+
+        # Flatten the tensor
+        batch, channels, height, width = x.shape
+        x = x.view(batch, channels * height * width)
+
+        # First fully connected layer + ReLU + Dropout
+        x = self.fc1.forward(x)
+        x = x.relu()
+        x = minitorch.dropout(x, self.dropout_rate, not self.training)
+
+        # Second fully connected layer
+        x = self.fc2.forward(x)
+
+        # LogSoftmax
+        out =  minitorch.logsoftmax(x, dim=1)
+        return out
 
 def make_mnist(start, stop):
     ys = []
